@@ -1,0 +1,283 @@
+-- Drop the existing database if it exists
+DROP DATABASE IF EXISTS socialMedia;
+
+-- Create a new database called 'socialMedia'
+CREATE DATABASE socialMedia;
+
+-- Use the newly created database
+USE socialMedia;
+
+CREATE TABLE User(
+	UserID INT PRIMARY KEY,
+    Username VARCHAR(32) NOT NULL,
+    Email VARCHAR(320) NOT NULL,
+    Password VARCHAR(64) NOT NULL,
+    Location VARCHAR(100) NULL, -- default to null if for privacy reasons
+    DateJoined DATE NOT NULL,
+	PrivacySetting VARCHAR(32) NOT NULL
+    -- Check to make sure privacy setting is one of the valid options
+		CHECK (PrivacySetting IN ('Public', 'FriendsOnly', 'Private'))
+);
+
+-- User Insertions
+INSERT INTO User (UserID, Username, Email, Password, Location, PrivacySetting, DateJoined) VALUES
+(1, 'ryan', 'ryan@example.com', 'pass123', 'NYC', 'Public', '2025-01-10'),
+(2, 'alex', 'alex@example.com', 'pass456', 'LA', 'FriendsOnly', '2025-01-12'),
+(3, 'maria', 'maria@example.com', 'pass789', 'Chicago', 'Public', '2025-01-14'),
+(4, 'sam', 'sam@example.com', 'sam987', 'Miami', 'Private', '2025-01-15'),
+(5, 'lisa', 'lisa@example.com', 'lisa321', 'NYC', 'FriendsOnly', '2025-01-16');
+
+SELECT * FROM User;
+
+CREATE TABLE Post(
+	PostID INT PRIMARY KEY,
+    Content VARCHAR(280) NOT NULL, 
+    MediaURL VARCHAR(255) NULL, -- default to null url if nothing is attached
+    Timestamp TIMESTAMP NOT NULL, 
+    Location VARCHAR(100) NULL, -- default to null for privacy reasons
+	Visibility VARCHAR(32) NOT NULL,
+        -- Check to make sure visibility is one of the valid options
+		CHECK (Visibility IN ('Public', 'FriendsOnly', 'Private')),
+        
+    -- Foreign Key
+	UserID INT NOT NULL,
+		CONSTRAINT fk_post_user FOREIGN KEY (UserID) REFERENCES User(UserID)
+);
+
+-- Post Insertions
+insert INTO Post (PostID, UserID, Content, MediaURL, Timestamp, Location, Visibility) values
+	(101, 1, 'Good morning everyone!', NULL, '2025-01-17 08:15', NULL, 'Public'),
+	(102, 2, 'Just got a new skateboard!', 'img/skate.png', '2025-01-17 10:00', 'NYC Skateboard Store', 'FriendsOnly'),
+	(103, 3, 'Beautiful sunset today', 'img/sunset.jpg', '2025-01-18 19:45', 'Central Park', 'Public'),
+	(104, 1, 'Going to the gym', NULL, '2025-01-19 14:25', 'NYC', 'Private'),
+	(105, 4, 'Vacation time!', 'img/beach.png', '2025-01-20 16:00', 'Las Vegas', 'Public');
+ 
+ SELECT * FROM Post;
+ 
+CREATE TABLE Comment(
+	CommentID INT PRIMARY KEY,
+	Content VARCHAR(280) NOT NULL,
+	Timestamp TIMESTAMP NOT NULL,
+    
+    -- Foreign Keys
+	PostID INT NOT NULL, 
+		CONSTRAINT fk_comment_post FOREIGN KEY (PostID) REFERENCES Post(PostID),
+	UserID INT NOT NULL,
+		CONSTRAINT fk_comment_user FOREIGN KEY (UserID) REFERENCES User(UserID)
+);
+
+-- Comment Insertions
+insert INTO Comment (CommentID, PostID, UserID, Content, Timestamp) values
+	(201, 101, 3, 'Nice post!', '2025-01-17 09:05'),
+	(202, 102, 1, 'Looks awesome!', '2025-01-17 10:30'),
+	(203, 103, 4, 'I love sunsets', '2025-01-18 20:00'),
+	(204, 105, 5, 'Have fun!', '2025-01-20 16:20'),
+	(205, 101, 2, 'Good morning!', '2025-01-17 08:20');
+ 
+select * FROM Comment;
+ 
+CREATE TABLE Likes(
+	LikeID INT PRIMARY KEY, 
+	Timestamp TIMESTAMP NOT NULL,
+    
+    -- Foreign Keys
+	PostID INT NOT NULL, 
+		CONSTRAINT fk_likes_post FOREIGN KEY (PostID) REFERENCES Post(PostID),
+	UserID INT NOT NULL,
+		CONSTRAINT fk_likes_user FOREIGN KEY (UserID) REFERENCES User(UserID)
+);
+
+-- Like insertions
+insert INTO Likes (LikeID, PostID, UserID, Timestamp) values
+	(301, 101, 2, '2025-01-17 08:22'),
+	(302, 101, 3, '2025-01-17 08:25'),
+	(303, 103, 1, '2025-01-18 19:50'),
+	(304, 105, 3, '2025-01-20 16:05'),
+	(305, 102, 5, '2025-01-17 10:10');
+ 
+select * from Likes;
+ 
+ CREATE TABLE Friendship(
+	RequestID INT PRIMARY KEY,
+	Timestamp TIMESTAMP NOT NULL, 
+	Status VARCHAR(32) NOT NULL,
+		-- Check to make sure request status is one of the valid options
+		CHECK (Status IN ('Accepted', 'Pending', 'Blocked')),
+        
+	-- Foreign Keys
+	SenderID INT NOT NULL,
+	CONSTRAINT fk_friend_sender FOREIGN KEY (SenderID) REFERENCES User(UserID),
+	ReceiverID INT NOT NULL,
+	CONSTRAINT fk_friend_receiver FOREIGN KEY (ReceiverID) REFERENCES User(UserID)
+);
+
+-- Friendship insertions
+insert INTO Friendship (RequestID, SenderID, ReceiverID, Status, Timestamp) values
+	(401, 1, 2, 'Accepted', '2025-01-10 12:00'),
+	(402, 2, 3, 'Accepted', '2025-01-11 14:30'),
+	(403, 3, 4, 'Pending', '2025-01-12 16:10'),
+	(404, 4, 5, 'Blocked', '2025-01-13 11:50'),
+	(405, 5, 1, 'Accepted', '2025-01-14 18:25');
+ 
+select * from Friendship; 
+ 
+ CREATE Table Message(
+	MessageID INT PRIMARY KEY,
+	Content VARCHAR(2000) NOT NULL, 
+	Timestamp TIMESTAMP NOT NULL,
+	ReadStatus BOOL NOT NULL,
+    
+    -- Foreign Keys
+	SenderID INT NOT NULL,
+		CONSTRAINT fk_message_sender FOREIGN KEY (SenderID) REFERENCES User(UserID),
+	ReceiverID INT NOT NULL,
+		CONSTRAINT fk_message_receiver FOREIGN KEY (ReceiverID) REFERENCES User(UserID)
+);
+
+-- Message Insertions
+insert INTO Message (MessageID, SenderID, ReceiverID, Content, Timestamp, ReadStatus) values
+	(501, 1, 2, 'Hey what’s up?', '2025-01-17 12:00', FALSE),
+	(502, 2, 1, 'All good, you?', '2025-01-17 12:05', TRUE),
+	(503, 3, 4, 'Want to hang out?', '2025-01-18 15:30', FALSE),
+	(504, 5, 1, 'Call me when free', '2025-01-19 09:45', FALSE),
+	(505, 4, 3, 'Sure, let’s meet tomorrow', '2025-01-19 16:20', TRUE);
+
+select * from Message;
+
+CREATE TABLE `Groups`(
+	GroupID INT PRIMARY KEY, 
+	GroupName VARCHAR(100) NOT NULL, 
+	Description VARCHAR(4096) NOT NULL,
+    PrivacyType VARCHAR(32) NOT NULL,
+		-- Check to make sure privacy type is one of the valid options
+		CHECK (PrivacyType IN ('Public', 'InviteOnly', 'Private')),
+        
+	-- Foreign Key
+	CreatedBy INT NOT NULL,
+		CONSTRAINT fk_group_creator FOREIGN KEY (CreatedBy) REFERENCES User(UserID)
+);
+
+-- Groups insertions
+insert INTO `Groups` (GroupID, GroupName, Description, PrivacyType, CreatedBy) values
+	(601, 'Food Lovers', 'Sharing recipes and restaurant tips', 'Public', 1),
+	(602, 'Gym Crew', 'Workout motivation and routines', 'Private', 1),
+	(603, 'Photography', 'Share your best shots', 'Public', 3),
+	(604, 'Gamers United', 'Gaming chat and teams', 'Public', 2),
+	(605, 'Travel Buddies', 'Plan trips together', 'InviteOnly', 5);
+
+select * from `Groups`;
+
+CREATE TABLE GroupMembership(
+	JoinDate DATE NOT NULL,
+    Role VARCHAR(32) NOT NULL,
+		-- Check to make sure role type is one of the valid options
+		CHECK (Role IN('Admin', 'Member')),
+        
+	-- Foreign Keys
+	GroupID INT NOT NULL,
+		CONSTRAINT fk_membership_group FOREIGN KEY (GroupID) REFERENCES `Groups`(GroupID),
+    UserID INT NOT NULL, 
+		CONSTRAINT fk_membership_user FOREIGN KEY (UserID) REFERENCES User(UserID),
+        
+	-- Composite key
+	PRIMARY KEY (GroupID, UserID)
+);
+
+-- GroupMembership insertions
+insert INTO GroupMembership (GroupID, UserID, Role, JoinDate) values
+	(601, 1, 'Admin', '2025-01-17'),
+	(602, 3, 'Member', '2025-01-18'),
+	(603, 1, 'Admin', '2025-01-17'),
+	(604, 2, 'Admin', '2025-01-18'),
+	(605, 5, 'Admin', '2025-01-19');
+ 
+ select * from GroupMembership;
+ 
+ CREATE TABLE Notifications(
+	NoteID INT PRIMARY KEY,
+    Timestamp TIMESTAMP NOT NULL,
+	NotificationType VARCHAR(32) NOT NULL,
+		-- Check to make sure notification type is one of the valid options
+		CHECK (NotificationType IN ('FriendRequest', 'Message', 'Like', 'Comment')),
+    
+    -- Foreign Keys
+    ReceiverID INT NOT NULL,
+		CONSTRAINT fk_note_receiver FOREIGN KEY (ReceiverID) REFERENCES User(UserID),
+	SenderID INT NOT NULL,
+		CONSTRAINT fk_note_sender FOREIGN KEY (SenderID) REFERENCES User(UserID),
+	PostID INT NULL, -- optional key if type is a like/comment on a post (default to null)
+		CONSTRAINT fk_note_post FOREIGN KEY (PostID) REFERENCES Post(PostID),
+	MessageID INT NULL, -- optional key if type is a message (default to null)
+		CONSTRAINT fk_note_message FOREIGN KEY (MessageID) REFERENCES Message(MessageID),
+	FriendID INT NULL, -- optional key if type is a friend request (default to null)
+		CONSTRAINT fk_note_friend FOREIGN KEY (FriendID) REFERENCES Friendship(RequestID)
+);
+
+-- Notification insertions
+insert INTO Notifications(NoteID, ReceiverID, SenderID, NotificationType, PostID, MessageID, FriendID, Timestamp) values
+	(701, 1, 2, 'FriendRequest', NULL, NULL, 401, '2025-01-20 17:21'),
+    (702, 4, 3, 'Message', NULL, 503, NULL, '2025-01-20 17:21'),
+    (703, 2, 5, 'Like', 101, NULL, NULL, '2025-01-17 08:22'),
+    (704, 4, 5, 'Comment', 105, NULL, NULL, '2025-01-20 16:20'),
+    (705, 1, 5, 'Message', NULL, 504, NULL, '2025-01-19 09:45');
+
+select * from Notifications;
+
+-- Queries 
+-- 1. Retrieve profile information for a specific user by username
+SELECT *
+FROM User
+WHERE Username = 'sam';
+
+-- 2. List all posts created by a particular user
+SELECT *
+FROM Post
+WHERE UserID = 4;
+
+-- 3. Get all comments on a specific post.
+SELECT *
+FROM Comment
+WHERE PostID = 105;
+
+-- 4. Count the number of likes on a particular post.
+SELECT COUNT(*) AS count 
+FROM Likes
+WHERE PostID = 103;
+
+-- 5. List all friends of a specific user.
+SELECT u.UserID, u.Username, u.Email, u.Location
+FROM User u 
+JOIN Friendship f ON (u.UserID = f.SenderID AND f.ReceiverID = 5) OR (u.UserID = f.ReceiverID AND f.SenderID = 5)
+WHERE f.Status = 'Accepted';
+
+-- 6. Find all unread messages for a user.
+SELECT *
+FROM Message
+WHERE ReceiverID = 1 AND ReadStatus = False;
+
+-- 7. Retrieve all notifications for a user.
+SELECT *
+FROM Notifications
+WHERE ReceiverID = 1;
+
+-- 8. List all members of a particular group.
+SELECT u.UserID, u.Username, gm.Role, gm.JoinDate
+FROM GroupMembership gm
+JOIN User u ON gm.UserID = u.UserID
+WHERE gm.GroupID = 601;
+
+-- 9. Find the most popular posts with a certain minimum number of likes.
+SELECT p.PostID, p.Content, p.Timestamp,
+Count(l.LikeID) AS LikeCount
+FROM Post p
+Join Likes l on p.PostID = l.PostID
+GROUP BY p.PostID, P.Content, p.Timestamp
+HAVING COUNT(l.LikeID) >=2
+ORDER BY LikeCount DESC;
+
+
+-- 10. Retrieve all posts tagged with a specific location.
+SELECT *
+From Post
+Where Location = 'Central Park';
+
